@@ -1,28 +1,125 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="一个示例网站">
-    <title>示例网站</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <title>テーブルクロス価格検索</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .price-range {
+            color: #dc3545;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <a href="/">首页</a>
-            <a href="/about">关于</a>
-        </nav>
-    </header>
-    <main>
-        <h1>欢迎！</h1>
-        <p id="demo">这是一个动态内容示例。</p>
-        <button onclick="changeText()">点击我</button>
-    </main>
-    <footer>
-        <p>© 2023 示例网站</p>
-    </footer>
-    <script src="app.js"></script>
+    <div class="container">
+        <h1>テーブルクロス価格検索</h1>
+        <div class="input-group">
+            <label for="length">長さ (cm):</label>
+            <input type="number" id="length" min="10" max="800" required>
+        </div>
+        <div class="input-group">
+            <label for="width">幅 (cm):</label>
+            <input type="number" id="width" min="10" max="130" required>
+        </div>
+        <div class="input-group">
+            <label for="thickness">厚さ (mm):</label>
+            <select id="thickness">
+                <option value="1">1mm</option>
+                <option value="1.5">1.5mm</option>
+                <option value="2">2mm</option>
+                <option value="3">3mm</option>
+            </select>
+        </div>
+        <button onclick="searchPrice()">価格を検索</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let priceData = null;
+
+        // 加载价格数据
+        fetch('price-data.json')
+            .then(response => response.json())
+            .then(data => priceData = data)
+            .catch(error => console.error('データの読み込みに失敗しました:', error));
+
+        function searchPrice() {
+            const length = parseFloat(document.getElementById('length').value);
+            const width = parseFloat(document.getElementById('width').value);
+            const thickness = document.getElementById('thickness').value;
+
+            if (!validateInput(length, width)) {
+                showResult('有効な数値を入力してください（長さ:10-800cm 幅:10-130cm）', 'error');
+                return;
+            }
+
+            const area = (length * width) / 10000;
+            const interval = findPriceInterval(area, thickness);
+            
+            if (interval) {
+                showResult(`価格帯: <span class="price-range">${interval.price}-${interval.price + 100} 円</span><br>
+                           対応サイズ: ${interval.min}m² ～ ${interval.max}m²`);
+            } else {
+                showResult('該当する価格帯が見つかりません', 'error');
+            }
+        }
+
+        function validateInput(length, width) {
+            return !isNaN(length) && !isNaN(width) &&
+                   length >= 10 && length <= 800 &&
+                   width >= 10 && width <= 130;
+        }
+
+        function findPriceInterval(area, thickness) {
+            if (!priceData || !priceData[thickness]) return null;
+            
+            return priceData[thickness].find(interval => 
+                area >= interval.min && area <= interval.max
+            );
+        }
+
+        function showResult(message, type = 'success') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = message;
+            resultDiv.className = type;
+        }
+    </script>
 </body>
 </html>
